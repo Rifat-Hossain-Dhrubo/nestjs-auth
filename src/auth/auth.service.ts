@@ -1,6 +1,11 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { Prisma } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -20,22 +25,21 @@ export class AuthService {
   async signUp(body: SignUpDto) {
     const hash = await bcrypt.hash(body.password, SALT_ROUNDS);
     try {
-      const user = await this.prisma.user.create({
+      await this.prisma.user.create({
         data: {
           name: body.name,
           email: body.email,
           hash: hash,
         },
       });
-
-      return {
-        message: 'User created successfully',
-      };
+      throw new Error();
     } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
           throw new ForbiddenException('Email already in use');
         }
+      } else {
+        throw new InternalServerErrorException();
       }
     }
   }
@@ -71,9 +75,10 @@ export class AuthService {
       sub: userId,
       email,
     };
+    const secret = this.config.get('JWT_SECRET');
     return this.jwt.signAsync(payload, {
       expiresIn: '1d',
-      secret: this.config.get('JWT_SECRET'),
+      secret,
     });
   }
 }

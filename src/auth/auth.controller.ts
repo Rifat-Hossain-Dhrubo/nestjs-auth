@@ -1,9 +1,10 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import {
   ApiCreatedResponse,
   ApiExtraModels,
   ApiOkResponse,
   ApiResponse,
+  ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
 import { ApiResponseStatus } from 'src/response/dto/response.dto';
@@ -13,6 +14,7 @@ import { AuthService } from './auth.service';
 import { SignInDto, SignUpDto } from './dto/auth.dto';
 
 @Controller('auth')
+@ApiTags('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -23,19 +25,18 @@ export class AuthController {
 
   @Post('sign-in')
   @ApiExtraModels(UserDto)
-  @ApiCreatedResponse({
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({
     schema: {
       properties: {
         message: {
           type: 'string',
           enum: [ApiResponseStatus.success, ApiResponseStatus.error],
         },
+        access_token: { type: 'string' },
         data: {
           type: 'object',
           allOf: [{ $ref: getSchemaPath(UserDto) }],
-          properties: {
-            access_token: { type: 'string' },
-          },
         },
       },
     },
